@@ -6,403 +6,93 @@
   <meta name="color-scheme" content="light dark" />
   <title>DashOne — Starter</title>
   <meta name="description" content="DashOne: un punto de partida HTML5 para tu dashboard personal, escalable a plataforma." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230069ff'/%3E%3Ctext x='50' y='58' font-size='48' text-anchor='middle' fill='white' font-family='Arial, Helvetica, sans-serif'%3ED1%3C/text%3E%3C/svg%3E" />
-  <style>
-    /* ========== Base / Reset ========== */
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --bg: #0b1020;
-      --panel: #111832;
-      --muted: #98a2b3;
-      --txt: #e6eaf2;
-      --brand: #3b82f6; /* azul */
-      --brand-2: #22d3ee; /* cian */
-      --ok: #10b981; --warn: #f59e0b; --err: #ef4444;
-      --ring: 0 0 0 3px color-mix(in oklab, var(--brand) 40%, transparent);
-      --radius: 16px;
-      --shadow: 0 10px 30px rgba(0,0,0,.25);
-    }
-    html[data-theme="light"]:root {
-      --bg: #f7f9fc;
-      --panel: #ffffff;
-      --muted: #6b7280;
-      --txt: #0f172a;
-      --shadow: 0 10px 30px rgba(2, 8, 23, .08);
-    }
-    body {
-      margin: 0; color: var(--txt); background: radial-gradient(1200px 600px at 20% -10%, #cde3ff20, transparent 60%), var(--bg);
-      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
-    }
-    a { color: var(--brand); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .visually-hidden { position:absolute; left:-9999px; }
-
-    /* ========== Layout ========== */
-    .app {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      grid-template-rows: 64px 1fr;
-      grid-template-areas:
-        "sidebar header"
-        "sidebar main";
-      min-height: 100dvh;
-    }
-    header {
-      grid-area: header; display: flex; align-items: center; gap: 12px; padding: 10px 16px; backdrop-filter: saturate(150%) blur(6px);
-      position: sticky; top: 0; z-index: 5; border-bottom: 1px solid color-mix(in oklab, var(--txt) 10%, transparent);
-      background: color-mix(in oklab, var(--panel) 92%, transparent);
-    }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; }
-    .brand-badge { width: 36px; height: 36px; border-radius: 12px; display:grid; place-items:center; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color:white; box-shadow: var(--shadow); font-weight:800; }
-    .grow { flex: 1 1 auto; }
-    .toolbar { display: flex; gap: 10px; align-items: center; }
-    .input, .btn {
-      height: 38px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--txt) 12%, transparent); background: var(--panel); color: var(--txt);
-      padding: 0 12px; outline: none; transition: .2s border, .2s transform, .2s background;
-    }
-    .input { width: clamp(160px, 40vw, 520px); }
-    .btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-    .btn:hover { transform: translateY(-1px); }
-    .btn.primary { background: linear-gradient(135deg, color-mix(in oklab, var(--brand) 80%, #fff), var(--brand-2)); color: #001028; border: none; }
-    .btn.ghost { background: transparent; }
-
-    aside.sidebar {
-      grid-area: sidebar; padding: 14px; border-right: 1px solid color-mix(in oklab, var(--txt) 10%, transparent);
-      background:
-        radial-gradient(500px 400px at 40% -20%, color-mix(in oklab, var(--brand) 16%, transparent), transparent 60%),
-        linear-gradient(180deg, color-mix(in oklab, var(--panel) 94%, transparent), transparent);
-      position: sticky; top: 0; height: 100dvh; overflow: auto;
-    }
-    .nav-group { margin-bottom: 18px; }
-    .nav-title { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 14px 8px; }
-    .nav { list-style: none; padding: 0; margin: 0; }
-    .nav a { display: flex; align-items:center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: inherit; }
-    .nav a:hover { background: color-mix(in oklab, var(--brand) 14%, transparent); }
-
-    main { grid-area: main; padding: 18px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
-    .card {
-      grid-column: span 4; background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 16px; border: 1px solid color-mix(in oklab, var(--txt) 12%, transparent);
-    }
-    .card.header { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; align-items:center; }
-    .kpis { display:grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
-    .kpi { grid-column: span 3; padding: 14px; border-radius: 14px; background: color-mix(in oklab, var(--panel) 92%, transparent); border: 1px dashed color-mix(in oklab, var(--txt) 12%, transparent); }
-    .kpi h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight:600; }
-    .kpi .val { font-size: 28px; font-weight: 800; letter-spacing: .3px; }
-    .kpi small { color: var(--muted); }
-
-    .tasks { grid-column: span 5; }
-    .notes { grid-column: span 4; }
-    .quicklinks { grid-column: span 3; }
-    .activity { grid-column: span 7; }
-    .chart { grid-column: span 5; min-height: 220px; display:grid; place-items:center; border: 1px dashed color-mix(in oklab, var(--txt) 14%, transparent); border-radius: 14px; }
-
-    .list, .todo { list-style:none; padding:0; margin: 8px 0 0; }
-    .list li, .todo li { padding: 8px 10px; border-radius: 10px; display:flex; align-items:center; justify-content:space-between; gap: 10px; }
-    .list li:hover, .todo li:hover { background: color-mix(in oklab, var(--brand) 10%, transparent); }
-    .muted { color: var(--muted); }
-
-    .tag { font-size:11px; padding: 2px 8px; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--txt) 16%, transparent); }
-    .tag.ok{ border-color: var(--ok); color: var(--ok); }
-    .tag.warn{ border-color: var(--warn); color: var(--warn); }
-    .tag.err{ border-color: var(--err); color: var(--err); }
-
-    footer { grid-column: 1 / -1; text-align:center; color: var(--muted); padding: 10px; font-size: 12px; }
-
-    /* ========== Responsive ========== */
-    @media (max-width: 1024px) {
-      .app { grid-template-columns: 72px 1fr; }
-      .nav a span.label { display:none; }
-      .kpi { grid-column: span 6; }
-      .tasks { grid-column: span 6; }
-      .notes { grid-column: span 6; }
-      .quicklinks { grid-column: span 12; }
-      .activity { grid-column: span 12; }
-      .chart { grid-column: span 12; }
-    }
-    @media (max-width: 720px) {
-      header { flex-wrap: wrap; gap: 8px; }
-      .input { width: 100%; order: 3; }
-      .app { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
-      aside.sidebar { display:none; }
-      .kpi { grid-column: span 12; }
-    }
-  </style>
+  <link rel="icon" href="favicon.svg" />
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
   <div class="app">
     <!-- ========= Sidebar ========= -->
-    <aside class="sidebar" aria-label="Barra lateral de navegación">
-      <div class="brand" style="margin:8px 6px 12px">
-        <div class="brand-badge" aria-hidden>D1</div>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">D1</div>
         <div>
           <div style="font-weight:800">DashOne</div>
           <small class="muted">Tu panel central</small>
         </div>
       </div>
-
       <nav class="nav-group">
         <div class="nav-title">Principal</div>
         <ul class="nav">
-          <li><a href="#inicio">🏠 <span class="label">Inicio</span></a></li>
-          <li><a href="#tareas">✅ <span class="label">Tareas</span></a></li>
-          <li><a href="#notas">📝 <span class="label">Notas</span></a></li>
-          <li><a href="#actividad">📈 <span class="label">Actividad</span></a></li>
-        </ul>
-      </nav>
-
-      <nav class="nav-group">
-        <div class="nav-title">Integraciones (futuras)</div>
-        <ul class="nav">
-          <li><a href="#correo">📧 <span class="label">Correo</span></a></li>
-          <li><a href="#calendario">📅 <span class="label">Calendario</span></a></li>
-          <li><a href="#finanzas">💳 <span class="label">Finanzas</span></a></li>
-          <li><a href="#equipo">👥 <span class="label">Equipo</span></a></li>
-        </ul>
-      </nav>
-
-      <nav class="nav-group">
-        <div class="nav-title">Sistema</div>
-        <ul class="nav">
-          <li><a href="#ajustes">⚙️ <span class="label">Ajustes</span></a></li>
-          <li><a href="#acerca">❓ <span class="label">Acerca</span></a></li>
+          <li><a href="#inicio">🏠 Inicio</a></li>
+          <li><a href="#tareas">✅ Tareas</a></li>
+          <li><a href="#notas">📝 Notas</a></li>
+          <li><a href="#actividad">📈 Actividad</a></li>
         </ul>
       </nav>
     </aside>
 
     <!-- ========= Header ========= -->
-    <header role="banner">
+    <header>
       <div class="brand">
-        <div class="brand-badge" aria-hidden>D1</div>
+        <div class="brand-badge">D1</div>
         <div>DashOne</div>
       </div>
-      <input class="input" type="search" placeholder="Busca acciones, notas o enlaces... (Ctrl+/)" id="globalSearch" aria-label="Búsqueda global"/>
+      <input class="input" type="search" placeholder="Busca acciones o enlaces... (Ctrl+/)" id="globalSearch"/>
       <div class="grow"></div>
-      <div id="clock" class="muted" aria-live="polite">—:—</div>
-      <button class="btn ghost" id="themeToggle" title="Alternar tema">🌓</button>
+      <div id="clock" class="muted">—:—</div>
+      <button class="btn ghost" id="themeToggle">🌓</button>
       <button class="btn primary" id="quickAdd">➕ Acceso rápido</button>
     </header>
 
     <!-- ========= Main ========= -->
-    <main id="inicio" role="main">
+    <main id="inicio">
       <section class="card header">
         <div>
-          <h1 style="margin:.2rem 0">Bienvenido a <strong>DashOne</strong></h1>
-          <p class="muted" style="margin:0">Un template minimalista para comenzar tu panel personal y escalar a plataforma.</p>
+          <h1>Bienvenido a <strong>DashOne</strong></h1>
+          <p class="muted">Tu punto de partida para construir un panel personal escalable.</p>
         </div>
-        <div><span class="tag">v0.1</span></div>
+        <div><span class="tag">v0.2</span></div>
       </section>
 
-      <!-- KPIs -->
-      <section class="kpis" aria-label="Indicadores">
-        <div class="kpi"><h3>Tareas hoy</h3><div class="val" id="kpiTasks">0</div><small id="kpiTasksDetail" class="muted">—</small></div>
-        <div class="kpi"><h3>Eventos</h3><div class="val">3</div><small class="muted">Calendario (placeholder)</small></div>
+      <section class="kpis">
+        <div class="kpi"><h3>Tareas</h3><div class="val" id="kpiTasks">0</div><small id="kpiTasksDetail" class="muted">—</small></div>
+        <div class="kpi"><h3>Eventos</h3><div class="val">3</div><small class="muted">Calendario (demo)</small></div>
         <div class="kpi"><h3>Focus</h3><div class="val">2h 15m</div><small class="muted">Sesión actual</small></div>
-        <div class="kpi"><h3>Balance energía</h3><div class="val">👍</div><small class="muted">Auto‑check</small></div>
+        <div class="kpi"><h3>Energía</h3><div class="val">👍</div><small class="muted">Auto-check</small></div>
       </section>
 
-      <!-- Grid -->
-      <div class="grid" style="margin-top:16px">
-        <!-- Tareas -->
-        <section id="tareas" class="card tasks" aria-label="Tareas">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <h2 style="margin:0">Tareas</h2>
-            <span class="tag ok">Hoy</span>
-            <div class="grow"></div>
-            <input id="todoInput" class="input" placeholder="Nueva tarea…" aria-label="Nueva tarea" />
-            <button id="addTodo" class="btn">Agregar</button>
-          </div>
-          <ul class="todo" id="todoList" aria-live="polite"></ul>
+      <div class="grid">
+        <section id="tareas" class="card tasks">
+          <h2>Tareas</h2>
+          <input id="todoInput" class="input" placeholder="Nueva tarea…"/>
+          <button id="addTodo" class="btn">Agregar</button>
+          <ul class="todo" id="todoList"></ul>
         </section>
 
-        <!-- Notas -->
-        <section id="notas" class="card notes" aria-label="Notas rápidas">
-          <h2 style="margin:0 0 8px">Notas</h2>
-          <textarea id="notes" style="width:100%; min-height:160px; border-radius:12px; border:1px solid color-mix(in oklab, var(--txt) 12%, transparent); background:var(--panel); color:var(--txt); padding:10px"></textarea>
-          <div class="muted" style="margin-top:6px">Se guarda automáticamente.</div>
+        <section id="notas" class="card notes">
+          <h2>Notas</h2>
+          <textarea id="notes"></textarea>
+          <small class="muted">Se guarda automáticamente.</small>
         </section>
 
-        <!-- Enlaces rápidos -->
-        <section class="card quicklinks" aria-label="Accesos rápidos">
-          <div style="display:flex; align-items:center; gap:10px">
-            <h2 style="margin:0">Accesos</h2>
-            <div class="grow"></div>
-            <button class="btn" id="addLink">➕</button>
-          </div>
+        <section class="card quicklinks">
+          <h2>Accesos rápidos</h2>
+          <button class="btn" id="addLink">➕</button>
           <ul class="list" id="links"></ul>
         </section>
 
-        <!-- Actividad -->
-        <section id="actividad" class="card activity" aria-label="Actividad reciente">
-          <h2 style="margin:0 0 10px">Actividad</h2>
+        <section id="actividad" class="card activity">
+          <h2>Actividad</h2>
           <ul class="list" id="activity">
             <li><span class="muted">Aún no hay actividad…</span></li>
           </ul>
         </section>
 
-        <!-- Chart placeholder -->
-        <section class="card chart" aria-label="Gráfico (placeholder)">
-          <canvas id="spark" width="560" height="160" aria-label="Gráfico de ejemplo" role="img"></canvas>
-          <small class="muted">Espacio listo para integrar tu librería de gráficos favorita (Chart.js, ECharts, etc.)</small>
-        </section>
-
-        <footer>© <span id="year"></span> DashOne. Construido con HTML5, CSS y JS nativos. <span class="muted">(Plantilla v0.1)</span></footer>
+        <footer>© <span id="year"></span> DashOne — HTML5, CSS y JS nativos.</footer>
       </div>
     </main>
   </div>
 
-  <script>
-    // ===== Utilidades =====
-    const $ = (sel, par=document) => par.querySelector(sel);
-    const $$ = (sel, par=document) => [...par.querySelectorAll(sel)];
-    const storage = {
-      get: (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? def } catch { return def } },
-      set: (k, v) => localStorage.setItem(k, JSON.stringify(v))
-    };
-
-    // ===== Reloj =====
-    function tickClock(){
-      const now = new Date();
-      $('#clock').textContent = now.toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' });
-    }
-    setInterval(tickClock, 1000); tickClock();
-
-    // ===== Tema =====
-    const themePref = storage.get('theme', (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-    document.documentElement.setAttribute('data-theme', themePref);
-    $('#themeToggle').addEventListener('click', () => {
-      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      storage.set('theme', next);
-      pushActivity(`Tema cambiado a ${next}`);
-    });
-
-    // ===== Enlaces rápidos =====
-    const linksStoreKey = 'dashone.links';
-    function renderLinks(){
-      const links = storage.get(linksStoreKey, [
-        {label:'Gmail', url:'https://mail.google.com'},
-        {label:'Calendar', url:'https://calendar.google.com'},
-        {label:'GitHub', url:'https://github.com'}
-      ]);
-      const ul = $('#links'); ul.innerHTML = '';
-      for(const link of links){
-        const li = document.createElement('li');
-        const a = document.createElement('a'); a.href = link.url; a.target = '_blank'; a.textContent = link.label;
-        const rm = document.createElement('button'); rm.className = 'btn ghost'; rm.textContent = '✖'; rm.title = 'Eliminar';
-        rm.addEventListener('click', () => { removeLink(link); });
-        li.append(a, rm); ul.append(li);
-      }
-      storage.set(linksStoreKey, links);
-    }
-    function removeLink(l){
-      const links = storage.get(linksStoreKey, []);
-      storage.set(linksStoreKey, links.filter(x => x.url !== l.url));
-      renderLinks();
-      pushActivity(`Eliminaste acceso: ${l.label}`);
-    }
-    $('#addLink').addEventListener('click', () => {
-      const label = prompt('Nombre del acceso'); if(!label) return;
-      const url = prompt('URL completa (https://...)'); if(!url) return;
-      const links = storage.get(linksStoreKey, []); links.push({label, url}); storage.set(linksStoreKey, links);
-      renderLinks(); pushActivity(`Agregaste acceso: ${label}`);
-    });
-
-    // ===== Tareas =====
-    const todoKey = 'dashone.todo';
-    function renderTodos(){
-      const list = storage.get(todoKey, []);
-      const ul = $('#todoList'); ul.innerHTML = '';
-      list.forEach((t, i) => {
-        const li = document.createElement('li');
-        const left = document.createElement('div');
-        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.addEventListener('change', () => toggleTodo(i));
-        const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
-        left.append(cb, txt);
-        const rm = document.createElement('button'); rm.className='btn ghost'; rm.textContent='✖'; rm.addEventListener('click', () => removeTodo(i));
-        li.append(left, rm); ul.append(li);
-      });
-      updateKpiTasks();
-      storage.set(todoKey, list);
-    }
-    function addTodo(text){
-      const list = storage.get(todoKey, []); list.push({ text, done:false, ts: Date.now() }); storage.set(todoKey, list);
-      renderTodos(); pushActivity(`Nueva tarea: ${text}`);
-    }
-    function removeTodo(i){ const list = storage.get(todoKey, []); const [x] = list.splice(i,1); storage.set(todoKey, list); renderTodos(); pushActivity(`Tarea eliminada: ${x.text}`); }
-    function toggleTodo(i){ const list = storage.get(todoKey, []); list[i].done = !list[i].done; storage.set(todoKey, list); renderTodos(); pushActivity(`Tarea ${list[i].done?'completada':'reactivada'}: ${list[i].text}`); }
-    function updateKpiTasks(){
-      const list = storage.get(todoKey, []);
-      const open = list.filter(t=>!t.done).length;
-      $('#kpiTasks').textContent = open;
-      $('#kpiTasksDetail').textContent = `${list.length} total, ${open} abiertas`;
-    }
-    $('#addTodo').addEventListener('click', () => {
-      const val = $('#todoInput').value.trim(); if(!val) return; addTodo(val); $('#todoInput').value='';
-    });
-    $('#todoInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ $('#addTodo').click(); }});
-
-    // ===== Notas =====
-    const notesKey = 'dashone.notes';
-    $('#notes').value = storage.get(notesKey, 'Escribe aquí tus ideas…');
-    $('#notes').addEventListener('input', (e)=> storage.set(notesKey, e.target.value));
-
-    // ===== Búsqueda global (demo) =====
-    document.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === '/'){ e.preventDefault(); $('#globalSearch').focus(); }});
-    $('#globalSearch').addEventListener('input', (e)=>{
-      const q = e.target.value.toLowerCase();
-      const hits = [];
-      // Buscar en tareas
-      storage.get(todoKey, []).forEach(t=>{ if(t.text.toLowerCase().includes(q)) hits.push('Tarea: '+t.text); });
-      // Buscar en notas
-      const notes = storage.get(notesKey, ''); if(notes.toLowerCase().includes(q)) hits.push('Notas: coincidencia');
-      // Mostrar resultado simple en actividad
-      if(q.length>1) pushActivity(`Búsqueda: "${q}" → ${hits.length} resultado(s)`);
-    });
-
-    // ===== Actividad =====
-    function pushActivity(text){
-      const ul = $('#activity');
-      const li = document.createElement('li');
-      const left = document.createElement('div');
-      left.textContent = text;
-      const time = document.createElement('small'); time.className='muted'; time.textContent = new Date().toLocaleTimeString();
-      li.append(left, time);
-      ul.prepend(li);
-    }
-
-    // ===== Quick Add Demo =====
-    $('#quickAdd').addEventListener('click', () => {
-      const t = prompt('¿Qué quieres agregar? (tarea, enlace o nota)');
-      if(!t) return;
-      const kind = t.toLowerCase();
-      if(kind.includes('tarea')){ const text = prompt('Texto de la tarea'); if(text) addTodo(text); }
-      else if(kind.includes('enlace')){ $('#addLink').click(); }
-      else { const n = prompt('Nueva nota'); if(n){ const val = $('#notes').value + '\n- ' + n; $('#notes').value = val; storage.set(notesKey, val); pushActivity('Nota agregada'); }}
-    });
-
-    // ===== Sparkline demo en canvas (placeholder) =====
-    function drawSpark(){
-      const c = $('#spark'); const ctx = c.getContext('2d');
-      const w = c.width, h = c.height; ctx.clearRect(0,0,w,h);
-      // eje base
-      ctx.globalAlpha = .3; ctx.strokeStyle = '#888'; ctx.beginPath(); ctx.moveTo(20, h-20); ctx.lineTo(w-20, h-20); ctx.stroke(); ctx.globalAlpha = 1;
-      // datos aleatorios (demo)
-      const points = Array.from({length: 24}, (_,i)=> ({ x: 20 + i*((w-40)/23), y: 20 + Math.random()*(h-60) }));
-      ctx.lineWidth = 2.5; const grad = ctx.createLinearGradient(0,0,w,0); grad.addColorStop(0,'#3b82f6'); grad.addColorStop(1,'#22d3ee'); ctx.strokeStyle = grad;
-      ctx.beginPath(); points.forEach((p,i)=>{ i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); }); ctx.stroke();
-      // sombra ligera
-      ctx.globalAlpha = .15; ctx.lineWidth = 10; ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = 2.5;
-    }
-
-    // ===== Init =====
-    function init(){
-      renderLinks(); renderTodos(); drawSpark();
-      $('#year').textContent = new Date().getFullYear();
-      pushActivity('Bienvenido a DashOne ✨');
-    }
-    document.addEventListener('DOMContentLoaded', init);
-  </script>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
