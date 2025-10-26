@@ -4,14 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>DashOne — Starter</title>
-  <meta name="description" content="DashOne: un punto de partida HTML5 para tu dashboard personal, escalable a plataforma." />
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>DashOne — Starter PWA</title>
+  <meta name="description" content="DashOne: tu panel personal instalable y escalable.">
   <link rel="icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/splash.css" />
 </head>
 <body>
+  <div id="splash">
+    <div>
+      <div class="logo">D1</div>
+      <div class="brand">DashOne</div>
+      <div class="hint">Cargando tu panel...</div>
+    </div>
+  </div>
   <div class="app">
-    <!-- ========= Sidebar ========= -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-badge">D1</div>
@@ -30,8 +42,6 @@
         </ul>
       </nav>
     </aside>
-
-    <!-- ========= Header ========= -->
     <header>
       <div class="brand">
         <div class="brand-badge">D1</div>
@@ -43,24 +53,20 @@
       <button class="btn ghost" id="themeToggle">🌓</button>
       <button class="btn primary" id="quickAdd">➕ Acceso rápido</button>
     </header>
-
-    <!-- ========= Main ========= -->
     <main id="inicio">
       <section class="card header">
         <div>
           <h1>Bienvenido a <strong>DashOne</strong></h1>
           <p class="muted">Tu punto de partida para construir un panel personal escalable.</p>
         </div>
-        <div><span class="tag">v0.2</span></div>
+        <div><span class="tag">v0.3 PWA</span></div>
       </section>
-
       <section class="kpis">
         <div class="kpi"><h3>Tareas</h3><div class="val" id="kpiTasks">0</div><small id="kpiTasksDetail" class="muted">—</small></div>
         <div class="kpi"><h3>Eventos</h3><div class="val">3</div><small class="muted">Calendario (demo)</small></div>
         <div class="kpi"><h3>Focus</h3><div class="val">2h 15m</div><small class="muted">Sesión actual</small></div>
         <div class="kpi"><h3>Energía</h3><div class="val">👍</div><small class="muted">Auto-check</small></div>
       </section>
-
       <div class="grid">
         <section id="tareas" class="card tasks">
           <h2>Tareas</h2>
@@ -68,31 +74,34 @@
           <button id="addTodo" class="btn">Agregar</button>
           <ul class="todo" id="todoList"></ul>
         </section>
-
         <section id="notas" class="card notes">
           <h2>Notas</h2>
           <textarea id="notes"></textarea>
           <small class="muted">Se guarda automáticamente.</small>
         </section>
-
         <section class="card quicklinks">
           <h2>Accesos rápidos</h2>
           <button class="btn" id="addLink">➕</button>
           <ul class="list" id="links"></ul>
         </section>
-
         <section id="actividad" class="card activity">
           <h2>Actividad</h2>
           <ul class="list" id="activity">
             <li><span class="muted">Aún no hay actividad…</span></li>
           </ul>
         </section>
-
-        <footer>© <span id="year"></span> DashOne — HTML5, CSS y JS nativos.</footer>
+        <footer>© <span id="year"></span> DashOne — HTML5, CSS, JS y PWA.</footer>
       </div>
     </main>
   </div>
-
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/splash.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker registrado ✅'))
+        .catch(err => console.error('Error al registrar SW:', err));
+    }
+  </script>
 </body>
 </html>
