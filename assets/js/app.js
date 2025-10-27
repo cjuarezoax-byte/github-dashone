@@ -1,4 +1,4 @@
-// DashOne — app.js (v0.4 FIX)
+// DashOne — app.js (v0.5 TAGS)
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -53,8 +53,16 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks =====
+// ===== Tasks (con #tags) =====
 const todoKey = 'dashone.todo';
+
+function parseTags(text){
+  // Extrae #hashtags del texto, devuelve [tags, cleanText]
+  const re = /#([\p{L}\p{N}_-]+)/giu;
+  const tags = [];
+  const clean = text.replace(re, (_,t)=>{ tags.push(t.toLowerCase()); return ''; }).replace(/\s{2,}/g,' ').trim();
+  return { tags: Array.from(new Set(tags)), cleanText: clean };
+}
 
 function renderTodos(){
   const list = storage.get(todoKey, []);
@@ -66,6 +74,14 @@ function renderTodos(){
     const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.addEventListener('change', () => toggleTodo(i));
     const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
     left.append(cb, txt);
+
+    // chips de tag
+    const chips = document.createElement('div');
+    (t.tags||[]).forEach(tag => {
+      const chip = document.createElement('span'); chip.className='tag'; chip.textContent = '#'+tag;
+      chip.style.marginLeft = '8px'; left.append(chip);
+    });
+
     const rm = document.createElement('button'); rm.className='btn ghost'; rm.textContent='✖'; rm.addEventListener('click', () => removeTodo(i));
     li.append(left, rm); ul.append(li);
   });
@@ -73,12 +89,16 @@ function renderTodos(){
   storage.set(todoKey, list);
 }
 
-function addTodo(text){
+function addTodo(input){
   const list = storage.get(todoKey, []);
-  list.push({ text, done:false, ts: Date.now(), doneTs: null });
+  const { tags, cleanText } = parseTags(input);
+  const text = cleanText || input;
+  list.push({ text, tags, done:false, ts: Date.now(), doneTs: null });
   storage.set(todoKey, list);
   renderTodos();
-  pushActivity('Nueva tarea: ' + text);
+  const tagStr = tags?.length ? ` (${tags.map(t=>'#'+t).join(' ')})` : '';
+  pushActivity('Nueva tarea: ' + text + tagStr);
+  window.dispatchEvent(new Event('storage')); // notifica a widgets
 }
 
 function removeTodo(i){
@@ -87,6 +107,7 @@ function removeTodo(i){
   storage.set(todoKey, list);
   renderTodos();
   pushActivity('Tarea eliminada: ' + (x?.text ?? i));
+  window.dispatchEvent(new Event('storage'));
 }
 
 function toggleTodo(i){
@@ -96,6 +117,7 @@ function toggleTodo(i){
   storage.set(todoKey, list);
   renderTodos();
   pushActivity('Tarea ' + (list[i].done ? 'completada' : 'reactivada') + ': ' + list[i].text);
+  window.dispatchEvent(new Event('storage'));
 }
 
 function updateKpiTasks(){
@@ -125,7 +147,10 @@ document.addEventListener('keydown', e => { if(e.ctrlKey && e.key === '/'){ e.pr
 $('#globalSearch')?.addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   const hits = [];
-  storage.get(todoKey, []).forEach(t => { if(t.text.toLowerCase().includes(q)) hits.push('Tarea: ' + t.text); });
+  storage.get(todoKey, []).forEach(t => {
+    const hay = (t.text.toLowerCase().includes(q) || (t.tags||[]).some(tag => ('#'+tag).includes(q)));
+    if(hay) hits.push('Tarea: ' + t.text);
+  });
   const hasNotes = storage.get(notesKey, '').toLowerCase().includes(q);
   if (hasNotes) hits.push('Notas: coincidencia');
   if (q.length > 1) pushActivity(`Búsqueda: "${q}" → ${hits.length} resultado(s)`);
