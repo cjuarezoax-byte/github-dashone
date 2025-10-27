@@ -1,5 +1,5 @@
-// DashOne — app.js (v0.8 TAG COLORS + CREATED DATE)
-// Tareas con #etiquetas, filtro, colores por hash y FECHA de creación visible
+// DashOne — app.js (v0.9 SORT + DATE FILTER)
+// Tareas con #etiquetas, filtro, colores por hash, fecha visible + orden y filtro por fecha
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -55,10 +55,13 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks (con #tags + FILTRO + COLORES + FECHA) =====
+// ===== Tasks (con #tags + FILTRO + COLORES + FECHA + ORDEN + FILTRO POR FECHA) =====
 const todoKey = 'dashone.todo';
-let taskFilter = 'ALL'; // etiqueta activa para el listado
+let taskFilter = 'ALL';   // etiqueta activa para el listado
+let taskSort   = 'desc';  // 'desc' (más nuevas arriba) | 'asc' (más antiguas arriba)
+let filterDate = '';      // 'YYYY-MM-DD' o ''
 
+// --- parsing de etiquetas ---
 function parseTags(text){
   // Extrae #hashtags del texto, devuelve [tags, cleanText]
   const re = /#([\p{L}\p{N}_-]+)/giu;
@@ -67,7 +70,7 @@ function parseTags(text){
   return { tags: Array.from(new Set(tags)), cleanText: clean };
 }
 
-// Color persistente por hash de etiqueta
+// --- colores persistentes por hash ---
 function tagHue(tag){
   let h = 0;
   for (const ch of tag.toLowerCase()) h = (h*31 + ch.charCodeAt(0)) % 360;
@@ -82,24 +85,33 @@ function tagStyle(tag){
   return { backgroundColor: bg, borderColor: bd, color: fg };
 }
 
-// Formato de fecha corto
+// --- formateo de fecha corto ---
 function formatDate(ts){
   const d = new Date(ts);
-  // Ej: 27 Oct, 14:05
   const dd = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
   const hh = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   return `${dd} · ${hh}`;
 }
 
-// Inserta UI de filtro debajo del H2 de Tareas
+// --- helpers de fecha ---
+function dayBounds(ymd){
+  // ymd: 'YYYY-MM-DD' => retorna [startTs, endTs] en hora local
+  const [y,m,d] = ymd.split('-').map(Number);
+  const start = new Date(y, m-1, d, 0,0,0).getTime();
+  const end   = new Date(y, m-1, d, 23,59,59,999).getTime();
+  return [start, end];
+}
+
+// ===== UI de filtros/orden =====
 function ensureTaskFilterUI(){
+  const h2 = $('#tareas h2');
+  // selector de etiqueta
   let sel = $('#taskFilter');
   if (!sel){
     sel = document.createElement('select');
     sel.id = 'taskFilter';
     sel.className = 'input';
     sel.style.margin = '8px 0 12px';
-    const h2 = $('#tareas h2');
     h2?.after(sel);
     sel.addEventListener('change', ()=>{
       taskFilter = sel.value;
@@ -113,18 +125,70 @@ function ensureTaskFilterUI(){
   sel.innerHTML = '<option value="ALL">Todas las etiquetas</option>' + tags.map(t=>`<option value="${t}">#${t}</option>`).join('');
   sel.value = tags.includes(cur) ? cur : 'ALL';
   taskFilter = sel.value;
+
+  // selector de orden
+  let sortSel = $('#taskSort');
+  if (!sortSel){
+    sortSel = document.createElement('select');
+    sortSel.id = 'taskSort';
+    sortSel.className = 'input';
+    sortSel.style.margin = '8px 8px 12px 8px';
+    sel.after(sortSel);
+    sortSel.addEventListener('change', ()=>{
+      taskSort = sortSel.value;
+      renderTodos();
+    });
+  }
+  sortSel.innerHTML = `
+    <option value="desc">Más nuevas arriba</option>
+    <option value="asc">Más antiguas arriba</option>
+  `;
+  sortSel.value = taskSort;
+
+  // filtro por fecha específica
+  let dateInp = $('#taskDate');
+  if (!dateInp){
+    dateInp = document.createElement('input');
+    dateInp.type = 'date';
+    dateInp.id = 'taskDate';
+    dateInp.className = 'input';
+    dateInp.style.margin = '8px 8px 12px 0';
+    sortSel.after(dateInp);
+
+    const clr = document.createElement('button');
+    clr.id = 'taskDateClear';
+    clr.className = 'btn ghost';
+    clr.textContent = '✖ fecha';
+    clr.style.margin = '8px 0 12px 8px';
+    dateInp.after(clr);
+
+    dateInp.addEventListener('change', ()=>{ filterDate = dateInp.value || ''; renderTodos(); });
+    clr.addEventListener('click', ()=>{ filterDate=''; dateInp.value=''; renderTodos(); });
+  }
+  dateInp.value = filterDate;
 }
 
 function renderTodos(){
   ensureTaskFilterUI();
   const list = storage.get(todoKey, []);
-  const inFilter = (t)=> taskFilter==='ALL' ? true : (t.tags||[]).includes(taskFilter);
+
+  // etiqueta
+  const inTag = (t)=> taskFilter==='ALL' ? true : (t.tags||[]).includes(taskFilter);
+  // filtro por fecha
+  let inDate = ()=>true;
+  if (filterDate){
+    const [start, end] = dayBounds(filterDate);
+    inDate = (t)=> (t.ts>=start && t.ts<=end);
+  }
+
+  // ordenar
+  const sorted = list.slice().sort((a,b)=> taskSort==='desc' ? (b.ts - a.ts) : (a.ts - b.ts));
 
   const ul = $('#todoList'); if(!ul) return;
   ul.innerHTML = '';
 
-  list.forEach((t, i) => {
-    if (!inFilter(t)) return;
+  sorted.forEach((t, i) => {
+    if (!inTag(t) || !inDate(t)) return;
     const li = document.createElement('li');
     const left = document.createElement('div');
     left.style.alignItems = 'center';

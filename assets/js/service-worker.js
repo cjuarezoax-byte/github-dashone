@@ -1,7 +1,7 @@
 // DashOne — service-worker.js (v0.4 FIX)
 // Bump de caché + actualización inmediata
 
-const CACHE_NAME = 'dashone-cache-v43';
+const CACHE_NAME = 'dashone-cache-v44';
 const FILES_TO_CACHE = [
   './',
   './index.html',

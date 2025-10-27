@@ -10,8 +10,19 @@
 .w-day strong { display:block; font-size:18px; }
 #w eeklyChart { border: 1px dashed color-mix(in oklab, var(--txt) 14%, transparent); border-radius: 14px; }
 .card.weekly .list li { justify-content:flex-start; gap:14px; }
+/* Chip base */
 .tag{
   display:inline-flex; align-items:center; gap:6px;
   padding:2px 10px; border-radius:999px; border:1px solid currentColor;
   font-size:12px; line-height:20px; white-space:nowrap; user-select:none;
 }
+
+/* Badge de fecha junto al texto */
+.badge-date{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:92px; padding:2px 8px; margin-right:8px;
+  font-size:12px; color:var(--muted);
+  border:1px dashed color-mix(in oklab, var(--txt) 20%, transparent);
+  border-radius:8px; background: color-mix(in oklab, var(--panel) 92%, transparent);
+}
+#taskFilter, #taskSort, #taskDate, #taskDateClear { vertical-align: middle; }

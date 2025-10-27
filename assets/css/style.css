@@ -27,6 +27,7 @@ main{grid-area:main;padding:18px}.grid{display:grid;gap:16px;grid-template-colum
   border:1px dashed color-mix(in oklab, var(--txt) 20%, transparent);
   border-radius:8px; background: color-mix(in oklab, var(--panel) 92%, transparent);
 }
+#taskFilter, #taskSort, #taskDate, #taskDateClear { vertical-align: middle; }
 
 footer{grid-column:1/-1;text-align:center;color:var(--muted);padding:10px;font-size:12px}
 @media (max-width:1024px){.app{grid-template-columns:72px 1fr}.kpi{grid-column:span 6}.tasks,.notes,.quicklinks,.activity,.weather,.weekly{grid-column:span 12}}
