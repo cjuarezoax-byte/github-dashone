@@ -1,0 +1,12 @@
+/* Widgets: Weather + Weekly Summary */
+.card.weather { grid-column: span 4; }
+.card.weekly  { grid-column: span 8; }
+.w-head { display:flex; align-items:center; gap:10px; }
+.w-head .btn { margin-left:auto; }
+.w-now { display:flex; align-items:baseline; gap:12px; margin: 8px 0; }
+.w-temp { font-size:42px; font-weight:800; letter-spacing:.4px; }
+.w-daily { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-top:10px; }
+.w-day { padding:10px; border-radius:12px; border:1px solid color-mix(in oklab, var(--txt) 12%, transparent); text-align:center; }
+.w-day strong { display:block; font-size:18px; }
+#w eeklyChart { border: 1px dashed color-mix(in oklab, var(--txt) 14%, transparent); border-radius: 14px; }
+.card.weekly .list li { justify-content:flex-start; gap:14px; }

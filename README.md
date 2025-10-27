@@ -1,3 +1,3 @@
-# DashOne v0.3 — PWA Starter
+# DashOne v0.4 — Widgets de Clima y Resumen semanal
 
-Proyecto listo para GitHub Pages. Incluye PWA, splash, y layout base.
+Incluye PWA + Clima (Open-Meteo) + Weekly desde localStorage.

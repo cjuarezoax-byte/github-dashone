@@ -1,11 +1,5 @@
-
-/* DashOne — splash.css */
-#splash{position:fixed; inset:0; display:grid; place-items:center;
-  background: radial-gradient(1200px 600px at 20% -10%, #cde3ff30, transparent 60%), #0b1020;
-  color:white; z-index:9999; transition: opacity .4s ease, visibility .4s ease;}
-#splash .logo{ width:clamp(96px,14vw,140px); height:clamp(96px,14vw,140px); border-radius:28px; display:grid; place-items:center;
-  background:linear-gradient(135deg,#3b82f6,#22d3ee); box-shadow:0 16px 40px rgba(0,0,0,.35); font:800 clamp(36px,5vw,56px) system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-#splash .brand{ margin-top:18px; font:700 clamp(18px,2.4vw,24px)/1.1 system-ui,-apple-system,Segoe UI,Roboto,Arial; letter-spacing:.3px;}
-#splash .hint{ margin-top:8px; opacity:.75; font-size:14px;}
-#splash.fade-out{ opacity:0; visibility:hidden;}
-html[data-theme="light"] #splash{ background: radial-gradient(1200px 600px at 20% -10%, #cde3ff50, transparent 60%), #f7f9fc; color:#0f172a;}
+#splash{position:fixed; inset:0; display:grid; place-items:center; background: radial-gradient(1200px 600px at 20% -10%, #cde3ff30, transparent 60%), #0b1020; color:white; z-index:9999; transition: opacity .4s, visibility .4s;}
+#splash .logo{ width:120px; height:120px; border-radius:28px; display:grid; place-items:center; background:linear-gradient(135deg,#3b82f6,#22d3ee); box-shadow:0 16px 40px rgba(0,0,0,.35); font:800 48px system-ui }
+#splash .brand{ margin-top:18px; font:700 20px/1.1 system-ui }
+#splash .hint{ margin-top:8px; opacity:.75; font-size:14px }
+#splash.fade-out{ opacity:0; visibility:hidden }

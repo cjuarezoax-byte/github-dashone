@@ -7,15 +7,17 @@
   <meta name="theme-color" content="#3b82f6" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>DashOne — Starter PWA</title>
+  <title>DashOne — v0.4 PWA</title>
   <meta name="description" content="DashOne: tu panel personal instalable y escalable.">
   <link rel="icon" href="favicon.svg" />
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="assets/css/splash.css" />
+  <link rel="stylesheet" href="assets/css/widgets.css" />
 </head>
 <body>
+  <!-- Splash Screen -->
   <div id="splash">
     <div>
       <div class="logo">D1</div>
@@ -23,7 +25,10 @@
       <div class="hint">Cargando tu panel...</div>
     </div>
   </div>
+
+  <!-- App Layout -->
   <div class="app">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-badge">D1</div>
@@ -39,9 +44,13 @@
           <li><a href="#tareas">✅ Tareas</a></li>
           <li><a href="#notas">📝 Notas</a></li>
           <li><a href="#actividad">📈 Actividad</a></li>
+          <li><a href="#clima">☀️ Clima</a></li>
+          <li><a href="#resumen">🗓️ Resumen semanal</a></li>
         </ul>
       </nav>
     </aside>
+
+    <!-- Header -->
     <header>
       <div class="brand">
         <div class="brand-badge">D1</div>
@@ -53,49 +62,86 @@
       <button class="btn ghost" id="themeToggle">🌓</button>
       <button class="btn primary" id="quickAdd">➕ Acceso rápido</button>
     </header>
+
+    <!-- Main Content -->
     <main id="inicio">
       <section class="card header">
         <div>
           <h1>Bienvenido a <strong>DashOne</strong></h1>
           <p class="muted">Tu punto de partida para construir un panel personal escalable.</p>
         </div>
-        <div><span class="tag">v0.3 PWA</span></div>
+        <div><span class="tag">v0.4</span></div>
       </section>
+
       <section class="kpis">
         <div class="kpi"><h3>Tareas</h3><div class="val" id="kpiTasks">0</div><small id="kpiTasksDetail" class="muted">—</small></div>
         <div class="kpi"><h3>Eventos</h3><div class="val">3</div><small class="muted">Calendario (demo)</small></div>
         <div class="kpi"><h3>Focus</h3><div class="val">2h 15m</div><small class="muted">Sesión actual</small></div>
         <div class="kpi"><h3>Energía</h3><div class="val">👍</div><small class="muted">Auto-check</small></div>
       </section>
+
       <div class="grid">
+        <!-- Tareas -->
         <section id="tareas" class="card tasks">
           <h2>Tareas</h2>
           <input id="todoInput" class="input" placeholder="Nueva tarea…"/>
           <button id="addTodo" class="btn">Agregar</button>
           <ul class="todo" id="todoList"></ul>
         </section>
+
+        <!-- Notas -->
         <section id="notas" class="card notes">
           <h2>Notas</h2>
           <textarea id="notes"></textarea>
           <small class="muted">Se guarda automáticamente.</small>
         </section>
+
+        <!-- Accesos -->
         <section class="card quicklinks">
           <h2>Accesos rápidos</h2>
           <button class="btn" id="addLink">➕</button>
           <ul class="list" id="links"></ul>
         </section>
+
+        <!-- Actividad -->
         <section id="actividad" class="card activity">
           <h2>Actividad</h2>
           <ul class="list" id="activity">
             <li><span class="muted">Aún no hay actividad…</span></li>
           </ul>
         </section>
+
+        <!-- Clima -->
+        <section id="clima" class="card weather">
+          <div class="w-head">
+            <h2>Clima</h2>
+            <button id="locate" class="btn ghost">📍 Usar mi ubicación</button>
+          </div>
+          <div id="weatherNow" class="w-now">
+            <div class="w-temp">—°</div>
+            <div class="w-desc muted">Obteniendo clima…</div>
+          </div>
+          <div id="weatherDaily" class="w-daily"></div>
+          <small class="muted">Fuente: Open‑Meteo (sin API key)</small>
+        </section>
+
+        <!-- Resumen semanal -->
+        <section id="resumen" class="card weekly">
+          <h2>Resumen semanal</h2>
+          <canvas id="weeklyChart" width="560" height="160" aria-label="Gráfico semanal" role="img"></canvas>
+          <ul class="list" id="weeklyList"></ul>
+        </section>
+
         <footer>© <span id="year"></span> DashOne — HTML5, CSS, JS y PWA.</footer>
       </div>
     </main>
   </div>
+
+  <!-- Scripts -->
   <script src="assets/js/app.js"></script>
   <script src="assets/js/splash.js"></script>
+  <script src="assets/js/widget-weather.js"></script>
+  <script src="assets/js/widget-weekly.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')

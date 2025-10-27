@@ -1,12 +1,15 @@
-// DashOne — service-worker.js (v0.3)
-const CACHE_NAME = 'dashone-cache-v1';
+// DashOne — service-worker.js (v0.4)
+const CACHE_NAME = 'dashone-cache-v2';
 const FILES_TO_CACHE = [
   './',
   './index.html',
   './assets/css/style.css',
   './assets/css/splash.css',
+  './assets/css/widgets.css',
   './assets/js/app.js',
   './assets/js/splash.js',
+  './assets/js/widget-weather.js',
+  './assets/js/widget-weekly.js',
   './assets/img/dashone-192.png',
   './assets/img/dashone-512.png',
   './assets/img/apple-touch-icon.png',
