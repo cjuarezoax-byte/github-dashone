@@ -1,5 +1,5 @@
-// DashOne — app.js (v0.9 SORT + DATE FILTER)
-// Tareas con #etiquetas, filtro, colores por hash, fecha visible + orden y filtro por fecha
+// DashOne — app.js (v1.0 RANGE + STATUS FILTER)
+// Tareas con #etiquetas, colores, fecha visible, orden, filtro por fecha exacta o RANGO y filtro por estado
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -55,15 +55,17 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks (con #tags + FILTRO + COLORES + FECHA + ORDEN + FILTRO POR FECHA) =====
-const todoKey = 'dashone.todo';
-let taskFilter = 'ALL';   // etiqueta activa para el listado
-let taskSort   = 'desc';  // 'desc' (más nuevas arriba) | 'asc' (más antiguas arriba)
-let filterDate = '';      // 'YYYY-MM-DD' o ''
+// ===== Tasks =====
+const todoKey   = 'dashone.todo';
+let taskFilter  = 'ALL';      // etiqueta
+let taskSort    = 'desc';     // 'desc' | 'asc'
+let filterDate  = '';         // fecha exacta YYYY-MM-DD (si está, ignora rango)
+let rangeFrom   = '';         // YYYY-MM-DD
+let rangeTo     = '';         // YYYY-MM-DD
+let statusFilter= 'all';      // 'all' | 'open' | 'done'
 
 // --- parsing de etiquetas ---
 function parseTags(text){
-  // Extrae #hashtags del texto, devuelve [tags, cleanText]
   const re = /#([\p{L}\p{N}_-]+)/giu;
   const tags = [];
   const clean = text.replace(re, (_,t)=>{ tags.push(t.toLowerCase()); return ''; }).replace(/\s{2,}/g,' ').trim();
@@ -71,11 +73,7 @@ function parseTags(text){
 }
 
 // --- colores persistentes por hash ---
-function tagHue(tag){
-  let h = 0;
-  for (const ch of tag.toLowerCase()) h = (h*31 + ch.charCodeAt(0)) % 360;
-  return h;
-}
+function tagHue(tag){ let h=0; for (const ch of tag.toLowerCase()) h=(h*31+ch.charCodeAt(0))%360; return h; }
 function tagStyle(tag){
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   const h = tagHue(tag);
@@ -85,7 +83,7 @@ function tagStyle(tag){
   return { backgroundColor: bg, borderColor: bd, color: fg };
 }
 
-// --- formateo de fecha corto ---
+// --- formato de fecha corto ---
 function formatDate(ts){
   const d = new Date(ts);
   const dd = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
@@ -94,91 +92,109 @@ function formatDate(ts){
 }
 
 // --- helpers de fecha ---
-function dayBounds(ymd){
-  // ymd: 'YYYY-MM-DD' => retorna [startTs, endTs] en hora local
-  const [y,m,d] = ymd.split('-').map(Number);
-  const start = new Date(y, m-1, d, 0,0,0).getTime();
-  const end   = new Date(y, m-1, d, 23,59,59,999).getTime();
-  return [start, end];
+function dayBounds(ymd){ const [y,m,d]=ymd.split('-').map(Number); return [ new Date(y,m-1,d,0,0,0).getTime(), new Date(y,m-1,d,23,59,59,999).getTime() ]; }
+function rangeBounds(from,to){
+  const [s] = dayBounds(from);
+  const [,e] = dayBounds(to);
+  return [s,e];
 }
 
-// ===== UI de filtros/orden =====
-function ensureTaskFilterUI(){
+// ===== UI =====
+function ensureTaskControls(){
   const h2 = $('#tareas h2');
-  // selector de etiqueta
+
+  // etiqueta
   let sel = $('#taskFilter');
-  if (!sel){
+  if(!sel){
     sel = document.createElement('select');
-    sel.id = 'taskFilter';
-    sel.className = 'input';
-    sel.style.margin = '8px 0 12px';
+    sel.id='taskFilter'; sel.className='input'; sel.style.margin='8px 8px 12px 0';
     h2?.after(sel);
-    sel.addEventListener('change', ()=>{
-      taskFilter = sel.value;
-      renderTodos();
-      pushActivity(taskFilter==='ALL' ? 'Filtro de tareas: todas' : `Filtro de tareas: #${taskFilter}`);
-    });
+    sel.addEventListener('change', ()=>{ taskFilter = sel.value; renderTodos(); });
   }
   const items = storage.get(todoKey, []);
   const tags = Array.from(new Set(items.flatMap(t => (t.tags||[])))).sort();
   const cur = sel.value || 'ALL';
-  sel.innerHTML = '<option value="ALL">Todas las etiquetas</option>' + tags.map(t=>`<option value="${t}">#${t}</option>`).join('');
-  sel.value = tags.includes(cur) ? cur : 'ALL';
-  taskFilter = sel.value;
+  sel.innerHTML = '<option value="ALL">Todas las etiquetas</option>'+tags.map(t=>`<option value="${t}">#${t}</option>`).join('');
+  sel.value = tags.includes(cur) ? cur : 'ALL'; taskFilter = sel.value;
 
-  // selector de orden
-  let sortSel = $('#taskSort');
-  if (!sortSel){
-    sortSel = document.createElement('select');
-    sortSel.id = 'taskSort';
-    sortSel.className = 'input';
-    sortSel.style.margin = '8px 8px 12px 8px';
-    sel.after(sortSel);
-    sortSel.addEventListener('change', ()=>{
-      taskSort = sortSel.value;
-      renderTodos();
-    });
+  // estado
+  let stat = $('#taskStatus');
+  if(!stat){
+    stat = document.createElement('select');
+    stat.id='taskStatus'; stat.className='input'; stat.style.margin='8px 8px 12px 0';
+    sel.after(stat);
+    stat.addEventListener('change', ()=>{ statusFilter = stat.value; renderTodos(); });
   }
-  sortSel.innerHTML = `
-    <option value="desc">Más nuevas arriba</option>
-    <option value="asc">Más antiguas arriba</option>
+  stat.innerHTML = `
+    <option value="all">Todas</option>
+    <option value="open">Abiertas</option>
+    <option value="done">Completadas</option>
   `;
+  stat.value = statusFilter;
+
+  // orden
+  let sortSel = $('#taskSort');
+  if(!sortSel){
+    sortSel = document.createElement('select');
+    sortSel.id='taskSort'; sortSel.className='input'; sortSel.style.margin='8px 8px 12px 0';
+    stat.after(sortSel);
+    sortSel.addEventListener('change', ()=>{ taskSort = sortSel.value; renderTodos(); });
+  }
+  sortSel.innerHTML = `<option value="desc">Más nuevas arriba</option><option value="asc">Más antiguas arriba</option>`;
   sortSel.value = taskSort;
 
-  // filtro por fecha específica
+  // fecha exacta
   let dateInp = $('#taskDate');
-  if (!dateInp){
-    dateInp = document.createElement('input');
-    dateInp.type = 'date';
-    dateInp.id = 'taskDate';
-    dateInp.className = 'input';
-    dateInp.style.margin = '8px 8px 12px 0';
+  if(!dateInp){
+    dateInp = document.createElement('input'); dateInp.type='date'; dateInp.id='taskDate'; dateInp.className='input'; dateInp.style.margin='8px 8px 12px 0';
     sortSel.after(dateInp);
-
-    const clr = document.createElement('button');
-    clr.id = 'taskDateClear';
-    clr.className = 'btn ghost';
-    clr.textContent = '✖ fecha';
-    clr.style.margin = '8px 0 12px 8px';
+    const clr = document.createElement('button'); clr.id='taskDateClear'; clr.className='btn ghost'; clr.textContent='✖ fecha'; clr.style.margin='8px 8px 12px 0';
     dateInp.after(clr);
-
-    dateInp.addEventListener('change', ()=>{ filterDate = dateInp.value || ''; renderTodos(); });
+    dateInp.addEventListener('change', ()=>{ filterDate = dateInp.value || ''; if(filterDate){ rangeFrom=''; rangeTo=''; $('#rangeFrom').value=''; $('#rangeTo').value=''; } renderTodos(); });
     clr.addEventListener('click', ()=>{ filterDate=''; dateInp.value=''; renderTodos(); });
   }
   dateInp.value = filterDate;
+
+  // rango
+  let rf = $('#rangeFrom');
+  if(!rf){
+    rf = document.createElement('input'); rf.type='date'; rf.id='rangeFrom'; rf.className='input'; rf.style.margin='8px 8px 12px 0';
+    dateInp.nextSibling.after(rf);
+    const rt = document.createElement('input'); rt.type='date'; rt.id='rangeTo'; rt.className='input'; rt.style.margin='8px 8px 12px 0';
+    rf.after(rt);
+    const rclr = document.createElement('button'); rclr.id='rangeClear'; rclr.className='btn ghost'; rclr.textContent='✖ rango'; rclr.style.margin='8px 8px 12px 0';
+    rt.after(rclr);
+
+    rf.addEventListener('change', ()=>{ rangeFrom = rf.value; if(rangeFrom){ filterDate=''; $('#taskDate').value=''; } renderTodos(); });
+    rt.addEventListener('change', ()=>{ rangeTo   = rt.value; if(rangeTo){ filterDate=''; $('#taskDate').value=''; } renderTodos(); });
+    rclr.addEventListener('click', ()=>{ rangeFrom=''; rangeTo=''; rf.value=''; rt.value=''; renderTodos(); });
+  }
+  rf.value = rangeFrom; $('#rangeTo').value = rangeTo;
 }
 
+// ===== Render =====
 function renderTodos(){
-  ensureTaskFilterUI();
+  ensureTaskControls();
   const list = storage.get(todoKey, []);
 
   // etiqueta
   const inTag = (t)=> taskFilter==='ALL' ? true : (t.tags||[]).includes(taskFilter);
-  // filtro por fecha
+  // estado
+  const inStatus = (t)=> statusFilter==='all' ? true : statusFilter==='open' ? !t.done : !!t.done;
+  // fecha exacta o rango
   let inDate = ()=>true;
   if (filterDate){
     const [start, end] = dayBounds(filterDate);
-    inDate = (t)=> (t.ts>=start && t.ts<=end);
+    inDate = (t)=> t.ts>=start && t.ts<=end;
+  } else if (rangeFrom && rangeTo){
+    const [start, end] = rangeBounds(rangeFrom, rangeTo);
+    inDate = (t)=> t.ts>=start && t.ts<=end;
+  } else if (rangeFrom && !rangeTo){
+    const [start, ] = dayBounds(rangeFrom);
+    inDate = (t)=> t.ts>=start;
+  } else if (!rangeFrom && rangeTo){
+    const [, end] = dayBounds(rangeTo);
+    inDate = (t)=> t.ts<=end;
   }
 
   // ordenar
@@ -188,7 +204,7 @@ function renderTodos(){
   ul.innerHTML = '';
 
   sorted.forEach((t, i) => {
-    if (!inTag(t) || !inDate(t)) return;
+    if (!inTag(t) || !inStatus(t) || !inDate(t)) return;
     const li = document.createElement('li');
     const left = document.createElement('div');
     left.style.alignItems = 'center';
@@ -198,20 +214,17 @@ function renderTodos(){
     date.className = 'badge-date';
     date.textContent = formatDate(t.ts ?? Date.now());
 
-    // Checkbox
     const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done;
     cb.addEventListener('change', () => toggleTodo(i));
 
-    // Texto
     const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
 
     left.append(date, cb, txt);
 
-    // chips de tag clicables (con color)
     (t.tags||[]).forEach(tag => {
       const chip = document.createElement('button');
       chip.className='tag'; chip.textContent = '#'+tag; chip.style.marginLeft='8px'; chip.style.cursor='pointer';
-      const s = tagStyle(tag); Object.assign(chip.style, s);
+      Object.assign(chip.style, tagStyle(tag));
       chip.title = `Filtrar por #${tag}`;
       chip.addEventListener('click', (e)=>{
         e.preventDefault();
@@ -228,6 +241,7 @@ function renderTodos(){
   storage.set(todoKey, list);
 }
 
+// ===== CRUD =====
 function addTodo(input){
   const list = storage.get(todoKey, []);
   const { tags, cleanText } = parseTags(input);
@@ -238,9 +252,8 @@ function addTodo(input){
   renderTodos();
   const tagStr = tags?.length ? ` (${tags.map(t=>'#'+t).join(' ')})` : '';
   pushActivity('Nueva tarea: ' + text + tagStr);
-  window.dispatchEvent(new Event('storage')); // notifica a widgets (weekly)
+  window.dispatchEvent(new Event('storage'));
 }
-
 function removeTodo(i){
   const list = storage.get(todoKey, []);
   const [x] = list.splice(i,1);
@@ -249,7 +262,6 @@ function removeTodo(i){
   pushActivity('Tarea eliminada: ' + (x?.text ?? i));
   window.dispatchEvent(new Event('storage'));
 }
-
 function toggleTodo(i){
   const list = storage.get(todoKey, []);
   list[i].done = !list[i].done;
@@ -260,6 +272,7 @@ function toggleTodo(i){
   window.dispatchEvent(new Event('storage'));
 }
 
+// ===== KPI =====
 function updateKpiTasks(){
   const list = storage.get(todoKey, []);
   const open = list.filter(t=>!t.done).length;
@@ -269,6 +282,7 @@ function updateKpiTasks(){
   if (d) d.textContent = `${list.length} total, ${open} abiertas`;
 }
 
+// ===== Inputs =====
 $('#addTodo')?.addEventListener('click', () => {
   const val = $('#todoInput').value.trim(); if(!val) return; addTodo(val); $('#todoInput').value='';
 });
@@ -282,7 +296,7 @@ if (notes){
   notes.addEventListener('input', e => storage.set(notesKey, e.target.value));
 }
 
-// ===== Global Search (demo) =====
+// ===== Global Search =====
 document.addEventListener('keydown', e => { if(e.ctrlKey && e.key === '/'){ e.preventDefault(); $('#globalSearch')?.focus(); }});
 $('#globalSearch')?.addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
@@ -291,7 +305,7 @@ $('#globalSearch')?.addEventListener('input', e => {
     const hay = (t.text.toLowerCase().includes(q) || (t.tags||[]).some(tag => ('#'+tag).includes(q)));
     if(hay) hits.push('Tarea: ' + t.text);
   });
-  const hasNotes = storage.get(notesKey, '').toLowerCase().includes(q);
+  const hasNotes = storage.get('dashone.notes', '').toLowerCase().includes(q);
   if (hasNotes) hits.push('Notas: coincidencia');
   if (q.length > 1) pushActivity(`Búsqueda: "${q}" → ${hits.length} resultado(s)`);
 });
