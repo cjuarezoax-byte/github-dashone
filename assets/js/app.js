@@ -1,5 +1,5 @@
-// DashOne — app.js (v1.0 RANGE + STATUS FILTER)
-// Tareas con #etiquetas, colores, fecha visible, orden, filtro por fecha exacta o RANGO y filtro por estado
+// DashOne — app.js (v1.1 EXPORT/IMPORT)
+// Tareas con #etiquetas, colores, fecha visible, orden/rango/estado + Exportar/Importar JSON
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -22,7 +22,7 @@ $('#themeToggle')?.addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   storage.set('theme', next);
-  renderTodos(); // recolorea chips según tema
+  renderTodos();
   pushActivity('Tema cambiado a ' + next);
 });
 
@@ -55,16 +55,16 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks =====
+// ===== Tasks state =====
 const todoKey   = 'dashone.todo';
 let taskFilter  = 'ALL';      // etiqueta
 let taskSort    = 'desc';     // 'desc' | 'asc'
-let filterDate  = '';         // fecha exacta YYYY-MM-DD (si está, ignora rango)
+let filterDate  = '';         // YYYY-MM-DD (exacta)
 let rangeFrom   = '';         // YYYY-MM-DD
 let rangeTo     = '';         // YYYY-MM-DD
 let statusFilter= 'all';      // 'all' | 'open' | 'done'
 
-// --- parsing de etiquetas ---
+// --- tags parsing ---
 function parseTags(text){
   const re = /#([\p{L}\p{N}_-]+)/giu;
   const tags = [];
@@ -72,7 +72,7 @@ function parseTags(text){
   return { tags: Array.from(new Set(tags)), cleanText: clean };
 }
 
-// --- colores persistentes por hash ---
+// --- tag colors (deterministic) ---
 function tagHue(tag){ let h=0; for (const ch of tag.toLowerCase()) h=(h*31+ch.charCodeAt(0))%360; return h; }
 function tagStyle(tag){
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -83,23 +83,17 @@ function tagStyle(tag){
   return { backgroundColor: bg, borderColor: bd, color: fg };
 }
 
-// --- formato de fecha corto ---
+// --- date formatting/helpers ---
 function formatDate(ts){
   const d = new Date(ts);
   const dd = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
   const hh = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   return `${dd} · ${hh}`;
 }
-
-// --- helpers de fecha ---
 function dayBounds(ymd){ const [y,m,d]=ymd.split('-').map(Number); return [ new Date(y,m-1,d,0,0,0).getTime(), new Date(y,m-1,d,23,59,59,999).getTime() ]; }
-function rangeBounds(from,to){
-  const [s] = dayBounds(from);
-  const [,e] = dayBounds(to);
-  return [s,e];
-}
+function rangeBounds(from,to){ const [s] = dayBounds(from); const [,e] = dayBounds(to); return [s,e]; }
 
-// ===== UI =====
+// ===== UI controls =====
 function ensureTaskControls(){
   const h2 = $('#tareas h2');
 
@@ -125,11 +119,7 @@ function ensureTaskControls(){
     sel.after(stat);
     stat.addEventListener('change', ()=>{ statusFilter = stat.value; renderTodos(); });
   }
-  stat.innerHTML = `
-    <option value="all">Todas</option>
-    <option value="open">Abiertas</option>
-    <option value="done">Completadas</option>
-  `;
+  stat.innerHTML = `<option value="all">Todas</option><option value="open">Abiertas</option><option value="done">Completadas</option>`;
   stat.value = statusFilter;
 
   // orden
@@ -170,6 +160,20 @@ function ensureTaskControls(){
     rclr.addEventListener('click', ()=>{ rangeFrom=''; rangeTo=''; rf.value=''; rt.value=''; renderTodos(); });
   }
   rf.value = rangeFrom; $('#rangeTo').value = rangeTo;
+
+  // Export / Import controls
+  let exp = $('#exportTasks');
+  if(!exp){
+    exp = document.createElement('button'); exp.id='exportTasks'; exp.className='btn'; exp.textContent='Exportar JSON';
+    const imp = document.createElement('button'); imp.id='importTasks'; imp.className='btn ghost'; imp.textContent='Importar JSON';
+    const file = document.createElement('input'); file.type='file'; file.id='importFile'; file.accept='application/json'; file.style.display='none';
+    const anchor = document.createElement('span'); anchor.style.margin='0 0 12px 8px'; anchor.append(exp, imp, file);
+    $('#rangeClear').after(anchor);
+
+    exp.addEventListener('click', exportTasks);
+    imp.addEventListener('click', ()=> file.click());
+    file.addEventListener('change', importTasksFromFile);
+  }
 }
 
 // ===== Render =====
@@ -209,7 +213,6 @@ function renderTodos(){
     const left = document.createElement('div');
     left.style.alignItems = 'center';
 
-    // Fecha de creación (badge a la izquierda)
     const date = document.createElement('span');
     date.className = 'badge-date';
     date.textContent = formatDate(t.ts ?? Date.now());
@@ -270,6 +273,78 @@ function toggleTodo(i){
   renderTodos();
   pushActivity('Tarea ' + (list[i].done ? 'completada' : 'reactivada') + ': ' + list[i].text);
   window.dispatchEvent(new Event('storage'));
+}
+
+// ===== Export / Import =====
+function download(filename, text){
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function nowStamp(){
+  const d = new Date();
+  const pad = (n)=> String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+function exportTasks(){
+  const items = storage.get(todoKey, []);
+  const payload = { version: '1.1', exportedAt: new Date().toISOString(), items };
+  download(`dashone-tasks-${nowStamp()}.json`, JSON.stringify(payload, null, 2));
+  pushActivity(`Exportaste ${items.length} tarea(s) a JSON`);
+}
+function validateTask(t){
+  if (!t || typeof t !== 'object') return false;
+  if (typeof t.text !== 'string') return false;
+  if (!Array.isArray(t.tags)) t.tags = [];
+  t.tags = t.tags.map(x => String(x).toLowerCase());
+  t.done = !!t.done;
+  t.ts = typeof t.ts === 'number' ? t.ts : Date.now();
+  t.doneTs = (t.done && typeof t.doneTs === 'number') ? t.doneTs : (t.done ? t.ts : null);
+  return true;
+}
+function importTasksFromFile(e){
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(String(reader.result || '{}'));
+      const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+      if (!Array.isArray(items)) throw new Error('Formato inválido');
+
+      const clean = items.filter(validateTask);
+      if (!clean.length){ alert('No se encontraron tareas válidas.'); return; }
+
+      const mode = confirm('Importar en modo REEMPLAZAR?\nAceptar = reemplazar todo\nCancelar = fusionar (merge) sin duplicados');
+      const current = storage.get(todoKey, []);
+
+      let result;
+      if (mode){
+        // backup previo
+        storage.set(todoKey+'.backup', current);
+        result = clean;
+      } else {
+        // merge + dedupe por (ts + text)
+        const map = new Map();
+        const keyOf = (t)=> `${t.ts}|${t.text}`;
+        current.forEach(t=> map.set(keyOf(t), t));
+        clean.forEach(t=> map.set(keyOf(t), t));
+        result = Array.from(map.values()).sort((a,b)=> b.ts-a.ts);
+      }
+
+      storage.set(todoKey, result);
+      pushActivity(`Importaste ${clean.length} tarea(s) (${mode?'reemplazo':'fusión'})`);
+      renderTodos();
+      window.dispatchEvent(new Event('storage'));
+    }catch(err){
+      console.error(err);
+      alert('Error al importar JSON: ' + err.message);
+    }finally{
+      e.target.value = ''; // reset input
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ===== KPI =====
