@@ -1,5 +1,5 @@
-// DashOne — widget-weekly.js (v0.5 TAGS)
-// Métricas por etiqueta/proyecto usando #hashtags en las tareas
+// DashOne — widget-weekly.js (v0.7 TAG COLORS)
+// Métricas por etiqueta/proyecto con filtro + chips coloreados y leyenda
 
 (function(){
   const $ = (s, p=document)=>p.querySelector(s);
@@ -10,7 +10,22 @@
   const canvas = $('#weeklyChart');
   const ctx = canvas.getContext('2d');
 
-  // UI: selector de etiqueta dinámico
+  // ---------- Color util: mismo algoritmo que app.js ----------
+  function tagHue(tag){
+    let h = 0;
+    for (const ch of tag.toLowerCase()) h = (h*31 + ch.charCodeAt(0)) % 360;
+    return h;
+  }
+  function tagStyle(tag){
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const h = tagHue(tag);
+    const bg = dark ? `hsl(${h} 70% 18% / .45)` : `hsl(${h} 95% 90% / 1)`;
+    const bd = dark ? `hsl(${h} 80% 45% / .7)`  : `hsl(${h} 80% 55% / .7)`;
+    const fg = dark ? `hsl(${h} 85% 88% / 1)`  : `hsl(${h} 50% 22% / 1)`;
+    return { bg, bd, fg };
+  }
+
+  // ---------- UI: selector de etiqueta dinámico ----------
   let filter = 'ALL';
   function ensureFilterUI(){
     let sel = document.getElementById('weeklyFilter');
@@ -31,6 +46,7 @@
     filter = sel.value;
   }
 
+  // ---------- Datos ----------
   function getWeekData(){
     const items = storage.get(todoKey, []);
     const now = new Date();
@@ -55,6 +71,7 @@
     return Array.from(map.entries()).sort((a,b)=> b[1]-a[1]); // [tag, count]
   }
 
+  // ---------- Render: lista + top etiquetas (coloreadas) ----------
   function renderList(data){
     listEl.innerHTML = '';
     const fmt = new Intl.DateTimeFormat(undefined, { weekday:'long', month:'short', day:'numeric' });
@@ -64,14 +81,41 @@
       listEl.appendChild(li);
     });
 
-    // Totales por etiqueta (Top 5)
-    const totals = getTotalsByTag().slice(0,5);
+    // Totales por etiqueta (Top 6) con chips coloreados
+    const totals = getTotalsByTag().slice(0,6);
     const li = document.createElement('li');
-    li.innerHTML = `<strong style="min-width:140px">Top etiquetas</strong> ` +
-      (totals.length ? totals.map(([t,c])=>`<span class="tag">#${t}: ${c}</span>`).join(' ') : `<span class="muted">No hay etiquetas aún</span>`);
+    li.style.display = 'flex'; li.style.flexWrap = 'wrap'; li.style.gap = '8px'; li.style.alignItems = 'center';
+
+    const title = document.createElement('strong'); title.style.minWidth = '140px'; title.textContent = 'Top etiquetas';
+    li.appendChild(title);
+
+    if (totals.length){
+      totals.forEach(([t,c])=>{
+        const chip = document.createElement('span');
+        chip.className = 'tag';
+        chip.textContent = `#${t}: ${c}`;
+        const { bg, bd, fg } = tagStyle(t);
+        chip.style.background = bg;
+        chip.style.borderColor = bd;
+        chip.style.color = fg;
+        chip.style.cursor = 'pointer';
+        chip.title = `Filtrar por #${t}`;
+        chip.addEventListener('click', ()=>{
+          const sel = document.getElementById('weeklyFilter');
+          if (sel){ sel.value = t; sel.dispatchEvent(new Event('change')); }
+        });
+        li.appendChild(chip);
+      });
+    } else {
+      const none = document.createElement('span');
+      none.className = 'muted';
+      none.textContent = 'No hay etiquetas aún';
+      li.appendChild(none);
+    }
     listEl.prepend(li);
   }
 
+  // ---------- Render: gráfico + leyenda de colores ----------
   function renderChart(data){
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0,0,w,h);
@@ -95,10 +139,55 @@
     ctx.fillStyle = '#888'; ctx.font = '12px system-ui';
     data.forEach((d,i)=>{ const label = new Intl.DateTimeFormat(undefined,{weekday:'short'}).format(d.day); ctx.fillText(label, 24+i*xStep, h-6); });
 
-    // legend
-    ctx.fillStyle = '#22d3ee'; ctx.fillRect(w-160, 14, 10, 10); ctx.fillStyle = '#fff'; ctx.fillText('Nuevas', w-145, 23);
-    ctx.fillStyle = '#3b82f6'; ctx.fillRect(w-160, 32, 10, 10); ctx.fillStyle = '#fff'; ctx.fillText('Hechas', w-145, 41);
-    if (filter !== 'ALL'){ ctx.fillStyle = '#fff'; ctx.fillText(`#${filter}`, w-160, 59); }
+    // leyenda DOM (debajo del canvas)
+    let legend = document.getElementById('weeklyLegend');
+    if (!legend){
+      legend = document.createElement('div');
+      legend.id = 'weeklyLegend';
+      legend.style.display = 'flex';
+      legend.style.flexWrap = 'wrap';
+      legend.style.alignItems = 'center';
+      legend.style.gap = '10px';
+      legend.style.marginTop = '8px';
+      canvas.after(legend);
+    }
+    legend.innerHTML = '';
+
+    // Líneas del gráfico
+    const makePill = (label, color) => {
+      const pill = document.createElement('span');
+      pill.className = 'tag';
+      pill.textContent = label;
+      pill.style.borderColor = color;
+      pill.style.color = color;
+      pill.style.background = 'transparent';
+      return pill;
+    };
+    legend.append(makePill('Nuevas', '#22d3ee'));
+    legend.append(makePill('Hechas', '#3b82f6'));
+
+    // Etiquetas más usadas (Top 6) con su color
+    const totals = getTotalsByTag().slice(0,6);
+    if (totals.length){
+      const sep = document.createElement('span'); sep.className = 'muted'; sep.textContent = '·';
+      legend.append(sep);
+      totals.forEach(([t])=>{
+        const swatch = document.createElement('span');
+        swatch.className = 'tag';
+        swatch.textContent = '#'+t;
+        const { bg, bd, fg } = tagStyle(t);
+        swatch.style.background = bg;
+        swatch.style.borderColor = bd;
+        swatch.style.color = fg;
+        swatch.style.cursor = 'pointer';
+        swatch.title = `Filtrar por #${t}`;
+        swatch.addEventListener('click', ()=>{
+          const sel = document.getElementById('weeklyFilter');
+          if (sel){ sel.value = t; sel.dispatchEvent(new Event('change')); }
+        });
+        legend.append(swatch);
+      });
+    }
   }
 
   function render(){
@@ -110,4 +199,7 @@
 
   window.addEventListener('storage', render);
   document.addEventListener('DOMContentLoaded', render);
+  // recolorea si cambia tema
+  const obs = new MutationObserver(render);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();

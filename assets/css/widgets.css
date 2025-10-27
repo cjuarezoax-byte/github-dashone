@@ -10,3 +10,8 @@
 .w-day strong { display:block; font-size:18px; }
 #w eeklyChart { border: 1px dashed color-mix(in oklab, var(--txt) 14%, transparent); border-radius: 14px; }
 .card.weekly .list li { justify-content:flex-start; gap:14px; }
+.tag{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:2px 10px; border-radius:999px; border:1px solid currentColor;
+  font-size:12px; line-height:20px; white-space:nowrap; user-select:none;
+}
