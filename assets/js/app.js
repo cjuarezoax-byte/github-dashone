@@ -1,5 +1,5 @@
-// DashOne — app.js (v0.6 TAG FILTERS)
-// Tareas con #etiquetas + filtro en el listado y en el resumen
+// DashOne — app.js (v0.7 TAG COLORS)
+// Tareas con #etiquetas + filtro y chips con color persistente por hash
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -22,6 +22,7 @@ $('#themeToggle')?.addEventListener('click', () => {
   const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   storage.set('theme', next);
+  renderTodos(); // recolorea chips según tema
   pushActivity('Tema cambiado a ' + next);
 });
 
@@ -54,7 +55,7 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks (con #tags + FILTRO) =====
+// ===== Tasks (con #tags + FILTRO + COLORES) =====
 const todoKey = 'dashone.todo';
 let taskFilter = 'ALL'; // etiqueta activa para el listado
 
@@ -64,6 +65,21 @@ function parseTags(text){
   const tags = [];
   const clean = text.replace(re, (_,t)=>{ tags.push(t.toLowerCase()); return ''; }).replace(/\s{2,}/g,' ').trim();
   return { tags: Array.from(new Set(tags)), cleanText: clean };
+}
+
+// Color persistente por hash de etiqueta
+function tagHue(tag){
+  let h = 0;
+  for (const ch of tag.toLowerCase()) h = (h*31 + ch.charCodeAt(0)) % 360;
+  return h;
+}
+function tagStyle(tag){
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const h = tagHue(tag);
+  const bg = dark ? `hsl(${h} 70% 18% / .45)` : `hsl(${h} 95% 90% / 1)`;
+  const bd = dark ? `hsl(${h} 80% 45% / .7)`  : `hsl(${h} 80% 55% / .7)`;
+  const fg = dark ? `hsl(${h} 85% 88% / 1)`  : `hsl(${h} 50% 22% / 1)`;
+  return { backgroundColor: bg, borderColor: bd, color: fg };
 }
 
 // Inserta UI de filtro debajo del H2 de Tareas
@@ -109,10 +125,11 @@ function renderTodos(){
     const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
     left.append(cb, txt);
 
-    // chips de tag clicables (para activar filtro)
+    // chips de tag clicables (con color)
     (t.tags||[]).forEach(tag => {
       const chip = document.createElement('button');
       chip.className='tag'; chip.textContent = '#'+tag; chip.style.marginLeft='8px'; chip.style.cursor='pointer';
+      const s = tagStyle(tag); Object.assign(chip.style, s);
       chip.title = `Filtrar por #${tag}`;
       chip.addEventListener('click', (e)=>{
         e.preventDefault();
