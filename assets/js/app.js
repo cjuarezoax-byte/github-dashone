@@ -1,4 +1,5 @@
-// DashOne — app.js (v0.5 TAGS)
+// DashOne — app.js (v0.6 TAG FILTERS)
+// Tareas con #etiquetas + filtro en el listado y en el resumen
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -53,8 +54,9 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks (con #tags) =====
+// ===== Tasks (con #tags + FILTRO) =====
 const todoKey = 'dashone.todo';
+let taskFilter = 'ALL'; // etiqueta activa para el listado
 
 function parseTags(text){
   // Extrae #hashtags del texto, devuelve [tags, cleanText]
@@ -64,27 +66,65 @@ function parseTags(text){
   return { tags: Array.from(new Set(tags)), cleanText: clean };
 }
 
+// Inserta UI de filtro debajo del H2 de Tareas
+function ensureTaskFilterUI(){
+  let sel = $('#taskFilter');
+  if (!sel){
+    sel = document.createElement('select');
+    sel.id = 'taskFilter';
+    sel.className = 'input';
+    sel.style.margin = '8px 0 12px';
+    const h2 = $('#tareas h2');
+    h2?.after(sel);
+    sel.addEventListener('change', ()=>{
+      taskFilter = sel.value;
+      renderTodos();
+      pushActivity(taskFilter==='ALL' ? 'Filtro de tareas: todas' : `Filtro de tareas: #${taskFilter}`);
+    });
+  }
+  const items = storage.get(todoKey, []);
+  const tags = Array.from(new Set(items.flatMap(t => (t.tags||[])))).sort();
+  const cur = sel.value || 'ALL';
+  sel.innerHTML = '<option value="ALL">Todas las etiquetas</option>' + tags.map(t=>`<option value="${t}">#${t}</option>`).join('');
+  sel.value = tags.includes(cur) ? cur : 'ALL';
+  taskFilter = sel.value;
+}
+
 function renderTodos(){
+  ensureTaskFilterUI();
   const list = storage.get(todoKey, []);
+  const inFilter = (t)=> taskFilter==='ALL' ? true : (t.tags||[]).includes(taskFilter);
+
   const ul = $('#todoList'); if(!ul) return;
   ul.innerHTML = '';
+
   list.forEach((t, i) => {
+    if (!inFilter(t)) return;
     const li = document.createElement('li');
     const left = document.createElement('div');
-    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done; cb.addEventListener('change', () => toggleTodo(i));
+
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done;
+    cb.addEventListener('change', () => toggleTodo(i));
+
     const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
     left.append(cb, txt);
 
-    // chips de tag
-    const chips = document.createElement('div');
+    // chips de tag clicables (para activar filtro)
     (t.tags||[]).forEach(tag => {
-      const chip = document.createElement('span'); chip.className='tag'; chip.textContent = '#'+tag;
-      chip.style.marginLeft = '8px'; left.append(chip);
+      const chip = document.createElement('button');
+      chip.className='tag'; chip.textContent = '#'+tag; chip.style.marginLeft='8px'; chip.style.cursor='pointer';
+      chip.title = `Filtrar por #${tag}`;
+      chip.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const sel = $('#taskFilter'); if(sel){ sel.value = tag; sel.dispatchEvent(new Event('change')); }
+      });
+      left.append(chip);
     });
 
     const rm = document.createElement('button'); rm.className='btn ghost'; rm.textContent='✖'; rm.addEventListener('click', () => removeTodo(i));
     li.append(left, rm); ul.append(li);
   });
+
   updateKpiTasks();
   storage.set(todoKey, list);
 }
@@ -98,7 +138,7 @@ function addTodo(input){
   renderTodos();
   const tagStr = tags?.length ? ` (${tags.map(t=>'#'+t).join(' ')})` : '';
   pushActivity('Nueva tarea: ' + text + tagStr);
-  window.dispatchEvent(new Event('storage')); // notifica a widgets
+  window.dispatchEvent(new Event('storage')); // notifica a widgets (weekly)
 }
 
 function removeTodo(i){
