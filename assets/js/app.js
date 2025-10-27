@@ -1,5 +1,5 @@
-// DashOne — app.js (v0.7 TAG COLORS)
-// Tareas con #etiquetas + filtro y chips con color persistente por hash
+// DashOne — app.js (v0.8 TAG COLORS + CREATED DATE)
+// Tareas con #etiquetas, filtro, colores por hash y FECHA de creación visible
 
 // ===== Helpers =====
 const $ = (s, p=document)=>p.querySelector(s);
@@ -55,7 +55,7 @@ $('#addLink')?.addEventListener('click', () => {
   renderLinks(); pushActivity('Agregaste acceso: ' + label);
 });
 
-// ===== Tasks (con #tags + FILTRO + COLORES) =====
+// ===== Tasks (con #tags + FILTRO + COLORES + FECHA) =====
 const todoKey = 'dashone.todo';
 let taskFilter = 'ALL'; // etiqueta activa para el listado
 
@@ -80,6 +80,15 @@ function tagStyle(tag){
   const bd = dark ? `hsl(${h} 80% 45% / .7)`  : `hsl(${h} 80% 55% / .7)`;
   const fg = dark ? `hsl(${h} 85% 88% / 1)`  : `hsl(${h} 50% 22% / 1)`;
   return { backgroundColor: bg, borderColor: bd, color: fg };
+}
+
+// Formato de fecha corto
+function formatDate(ts){
+  const d = new Date(ts);
+  // Ej: 27 Oct, 14:05
+  const dd = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+  const hh = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return `${dd} · ${hh}`;
 }
 
 // Inserta UI de filtro debajo del H2 de Tareas
@@ -118,12 +127,21 @@ function renderTodos(){
     if (!inFilter(t)) return;
     const li = document.createElement('li');
     const left = document.createElement('div');
+    left.style.alignItems = 'center';
 
+    // Fecha de creación (badge a la izquierda)
+    const date = document.createElement('span');
+    date.className = 'badge-date';
+    date.textContent = formatDate(t.ts ?? Date.now());
+
+    // Checkbox
     const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.done;
     cb.addEventListener('change', () => toggleTodo(i));
 
+    // Texto
     const txt = document.createElement('span'); txt.textContent = t.text; if(t.done) txt.style.textDecoration='line-through';
-    left.append(cb, txt);
+
+    left.append(date, cb, txt);
 
     // chips de tag clicables (con color)
     (t.tags||[]).forEach(tag => {
@@ -150,7 +168,8 @@ function addTodo(input){
   const list = storage.get(todoKey, []);
   const { tags, cleanText } = parseTags(input);
   const text = cleanText || input;
-  list.push({ text, tags, done:false, ts: Date.now(), doneTs: null });
+  const now = Date.now();
+  list.push({ text, tags, done:false, ts: now, doneTs: null });
   storage.set(todoKey, list);
   renderTodos();
   const tagStr = tags?.length ? ` (${tags.map(t=>'#'+t).join(' ')})` : '';
