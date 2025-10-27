@@ -13,8 +13,22 @@ const todoKey='dashone.todo';
 function renderTodos(){ const list=storage.get(todoKey,[]); const ul=$('#todoList'); if(!ul) return; ul.innerHTML=''; list.forEach((t,i)=>{ const li=document.createElement('li'); const left=document.createElement('div'); const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!t.done; cb.addEventListener('change',()=>toggleTodo(i)); const txt=document.createElement('span'); txt.textContent=t.text; if(t.done) txt.style.textDecoration='line-through'; left.append(cb,txt); const rm=document.createElement('button'); rm.className='btn ghost'; rm.textContent='✖'; rm.addEventListener('click',()=>removeTodo(i)); li.append(left,rm); ul.append(li); }); updateKpiTasks(); storage.set(todoKey,list); }
 function addTodo(text){ const list=storage.get(todoKey,[]); list.push({ text, done:false, ts:Date.now() }); storage.set(todoKey,list); renderTodos(); pushActivity('Nueva tarea: '+text); }
 function removeTodo(i){ const list=storage.get(todoKey,[]); const x=list.splice(i,1)[0]; storage.set(todoKey,list); renderTodos(); pushActivity('Tarea eliminada: '+(x?.text||i)); }
-function toggleTodo(i){ const list=storage.get(todoKey,[]); list[i].done=!list[i].done; list[i].doneTs = list[i].done ? Date.now() : null; storage.set(todoKey,list); renderTodos(); pushActivity('Tarea '+(list[i].done?'completada':'reactivada')+': '+list[i].text); }
-function updateKpiTasks(){ const list=storage.get(todoKey,[]); const open=list.filter(t=>!t.done).length; $('#kpiTasks')?.(textContent=open); const det=$('#kpiTasksDetail'); if(det) det.textContent=`${list.length} total, ${open} abiertas`; }
+function toggleTodo(i){
+  const list = storage.get('dashone.todo', []);
+  list[i].done = !list[i].done;
+  list[i].doneTs = list[i].done ? Date.now() : null;
+  storage.set('dashone.todo', list);
+  renderTodos();
+  pushActivity(`Tarea ${list[i].done ? 'completada' : 'reactivada'}: ${list[i].text}`);
+}
+function updateKpiTasks(){
+  const list = storage.get('dashone.todo', []);
+  const open = list.filter(t => !t.done).length;
+  const k = document.querySelector('#kpiTasks');
+  const d = document.querySelector('#kpiTasksDetail');
+  if (k) k.textContent = open;
+  if (d) d.textContent = `${list.length} total, ${open} abiertas`;
+}
 $('#addTodo')?.addEventListener('click',()=>{ const val=$('#todoInput').value.trim(); if(!val) return; addTodo(val); $('#todoInput').value=''; });
 $('#todoInput')?.addEventListener('keydown',e=>{ if(e.key==='Enter') $('#addTodo').click(); });
 const notesKey='dashone.notes'; const notes=$('#notes'); if(notes){ notes.value=storage.get(notesKey,'Escribe aquí tus ideas…'); notes.addEventListener('input',e=>storage.set(notesKey,e.target.value)); }
